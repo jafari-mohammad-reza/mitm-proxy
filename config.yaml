@@ -5,3 +5,8 @@ log:
   error_path: mitm-proxy-error.log
 proxy:
   port: 443
+cert:
+  common_name: sni-proxy
+  organization: sni-proxy
+  path: certs/ca.pem
+  private_key: certs/ca-key.pem

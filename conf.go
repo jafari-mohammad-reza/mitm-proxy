@@ -12,6 +12,13 @@ import (
 type Conf struct {
 	Proxy ProxyConf `mapstructure:"proxy"`
 	Log   LogConf   `mapstructure:"log"`
+	Cert  CertConf  `mapstructure:"cert"`
+}
+type CertConf struct {
+	CommonName   string `mapstructure:"common_name" validate:"required"`
+	Organization string `mapstructure:"organization" validate:"required"`
+	Path         string `mapstructure:"path" validate:"required"`
+	PrivateKey   string `mapstructure:"private_key" validate:"required"`
 }
 type ProxyConf struct {
 	Port int `mapstructure:"port" validate:"required"`

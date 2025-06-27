@@ -11,7 +11,12 @@ func main() {
 	if err != nil {
 		slog.Error("Failed to initialize logger", "error", err)
 	}
-	server := NewProxyServer(conf, logger)
+	certHandler := NewCertHandler(conf, logger)
+	err = certHandler.Init()
+	if err != nil {
+		logger.Error("Failed to initialize certificate handler", err)
+	}
+	server := NewProxyServer(conf, logger, certHandler)
 	if err := server.Start(); err != nil {
 		logger.Error("Failed to start proxy server", err)
 	}

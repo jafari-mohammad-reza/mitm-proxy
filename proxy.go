@@ -9,11 +9,12 @@ import (
 )
 
 type ProxyServer struct {
-	conf   *Conf
-	logger ILogger
+	conf        *Conf
+	logger      ILogger
+	certHandler *CertHandler
 }
 
-func NewProxyServer(conf *Conf, logger ILogger) *ProxyServer {
+func NewProxyServer(conf *Conf, logger ILogger, certHandler *CertHandler) *ProxyServer {
 	return &ProxyServer{
 		conf:   conf,
 		logger: logger,
