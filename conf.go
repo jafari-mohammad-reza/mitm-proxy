@@ -10,7 +10,11 @@ import (
 )
 
 type Conf struct {
-	Log LogConf `mapstructure:"log"`
+	Proxy ProxyConf `mapstructure:"proxy"`
+	Log   LogConf   `mapstructure:"log"`
+}
+type ProxyConf struct {
+	Port int `mapstructure:"port" validate:"required"`
 }
 type LogConf struct {
 	InfoPath  string `mapstructure:"info_path"`

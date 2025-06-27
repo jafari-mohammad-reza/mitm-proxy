@@ -11,5 +11,8 @@ func main() {
 	if err != nil {
 		slog.Error("Failed to initialize logger", "error", err)
 	}
-	logger.Info("Logger initialized")
+	server := NewProxyServer(conf, logger)
+	if err := server.Start(); err != nil {
+		logger.Error("Failed to start proxy server", err)
+	}
 }

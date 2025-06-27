@@ -3,3 +3,5 @@ blocked_domains:
 log:
   info_path: mitm-proxy.log
   error_path: mitm-proxy-error.log
+proxy:
+  port: 443
