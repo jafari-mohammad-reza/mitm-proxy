@@ -1,0 +1,5 @@
+blocked_domains:
+  twitter.com
+log:
+  info_path: mitm-proxy.log
+  error_path: mitm-proxy-error.log
