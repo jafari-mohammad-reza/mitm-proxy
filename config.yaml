@@ -10,3 +10,4 @@ cert:
   organization: sni-proxy
   path: certs/ca.pem
   private_key: certs/ca-key.pem
+  certs_dir: certs

@@ -19,6 +19,7 @@ type CertConf struct {
 	Organization string `mapstructure:"organization" validate:"required"`
 	Path         string `mapstructure:"path" validate:"required"`
 	PrivateKey   string `mapstructure:"private_key" validate:"required"`
+	CertsDir     string `mapstructure:"certs_dir" validate:"required"`
 }
 type ProxyConf struct {
 	Port int `mapstructure:"port" validate:"required"`

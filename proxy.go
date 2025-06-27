@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -13,14 +15,25 @@ type ProxyServer struct {
 	logger      ILogger
 	certHandler *CertHandler
 }
+type connWrapper struct {
+	net.Conn
+	Reader *bufio.Reader
+}
 
-func NewProxyServer(conf *Conf, logger ILogger, certHandler *CertHandler) *ProxyServer {
+func (c *connWrapper) Read(b []byte) (int, error) {
+	n, err := c.Reader.Read(b)
+	fmt.Println("connWrapper read", n, err)
+	return n, err
+}
+func NewProxyServer(conf *Conf, logger ILogger) *ProxyServer {
 	return &ProxyServer{
-		conf:   conf,
-		logger: logger,
+		conf:        conf,
+		logger:      logger,
+		certHandler: NewCertHandler(conf, logger),
 	}
 }
 func (p *ProxyServer) Start() error {
+	p.certHandler.Init()
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", p.conf.Proxy.Port))
 	if err != nil {
 		return err
@@ -57,11 +70,44 @@ func (p *ProxyServer) handleConn(conn net.Conn) {
 	}
 
 	fmt.Println("SNI:", sni)
+	cert, err := p.certHandler.getLeafCert(sni)
+	if err != nil {
+		p.logger.Error("Failed to get leaf certificate", err)
+		return
+	}
+	tlsConn := tls.Server(&connWrapper{
+		Conn: conn,
+		Reader: bufio.NewReader(io.MultiReader(
+			bytes.NewReader(clientHello),
+			conn,
+		))}, &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+	})
+
+	fmt.Println("first")
+	// tlsConn.SetDeadline(time.Now().Add(5 * time.Second))
+	if err := tlsConn.Handshake(); err != nil {
+		p.logger.Error("TLS handshake failed with client", err)
+		return
+	}
+	fmt.Println("second")
+	fmt.Println("Connecting to upstream:", sni)
+	ips, err := net.LookupHost(sni)
+	fmt.Println("IPs:", ips, "Err:", err)
+	upstreamConn, err := tls.Dial("tcp", net.JoinHostPort(sni, "443"), &tls.Config{
+		ServerName: sni,
+	})
+	fmt.Println("upsteam conn")
+	if err != nil {
+		p.logger.Error("Failed to connect to upstream", err)
+		return
+	}
+	go io.Copy(upstreamConn, tlsConn)
+	io.Copy(tlsConn, upstreamConn)
 }
 func readClientHello(r *bufio.Reader) ([]byte, error) {
 	header := make([]byte, 5)
 
-	// Step 1: Read the TLS record header
 	if _, err := io.ReadFull(r, header); err != nil {
 		return nil, fmt.Errorf("failed to read TLS header: %w", err)
 	}
@@ -89,7 +135,7 @@ func (p *ProxyServer) extractSNIFromClientHello(data []byte) (string, error) {
 		return "", fmt.Errorf("incomplete TLS record")
 	}
 
-	offset := 5 + 38 // handshake header + random + sessionID length
+	offset := 5 + 38
 
 	if len(data) < offset+1 {
 		return "", fmt.Errorf("data too short for session ID length")
@@ -125,7 +171,7 @@ func (p *ProxyServer) extractSNIFromClientHello(data []byte) (string, error) {
 		extSize := int(binary.BigEndian.Uint16(data[offset+2 : offset+4]))
 		offset += 4
 
-		if extType == 0x00 { // SNI extension
+		if extType == 0x00 {
 			if extSize < 5 {
 				return "", fmt.Errorf("SNI extension too short")
 			}
